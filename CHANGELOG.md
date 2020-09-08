@@ -1,3 +1,7 @@
+## [vNext]
+### Added
+- Supporting check full element with ufg. [Trello 2145](https://trello.com/c/8tPAnz66)
+
 ## [3.177.0] - 2020-09-07 
 ### Added
 - Use predefined device info for pixel ratio. [Trello 301](https://trello.com/c/vGSi2NFz/)

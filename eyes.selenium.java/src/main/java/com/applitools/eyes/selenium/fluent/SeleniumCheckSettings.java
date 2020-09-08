@@ -26,6 +26,7 @@ public class SeleniumCheckSettings extends CheckSettings implements ISeleniumChe
     public static final String VIEWPORT = "viewport";
     public static final String REGION = "region";
     public static final String SELECTOR = "selector";
+    public static final String FULL_SELECTOR = "full-selector";
     private By targetSelector;
     private WebElement targetElement;
     private final List<FrameLocator> frameChain = new ArrayList<>();
@@ -466,7 +467,9 @@ public class SeleniumCheckSettings extends CheckSettings implements ISeleniumChe
             return stitchContent ? FULL_PAGE : VIEWPORT;
         } else if (region != null) {
             return REGION;
-        } else /* if (selector != null) */ {
+        } else if (stitchContent) {
+            return FULL_SELECTOR;
+        } else {
             return SELECTOR;
         }
     }
