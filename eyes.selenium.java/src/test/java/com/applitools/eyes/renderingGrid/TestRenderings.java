@@ -310,7 +310,7 @@ public class TestRenderings extends ReportingTestSuite {
                 return null;
             }
         }).when(runner).check(any(ICheckSettings.class), nullable(IDebugResourceWriter.class), any(FrameData.class),
-                any(IEyesConnector.class), ArgumentMatchers.<List<VisualGridTask>>any(), ArgumentMatchers.<List<VisualGridTask>>any(),
+                any(IEyesConnector.class), ArgumentMatchers.<List<VisualGridTask>>any(),
                 any(VisualGridRunner.RenderListener.class), ArgumentMatchers.<List<VisualGridSelector[]>>any(), any(UserAgent.class));
 
         Eyes eyes = new Eyes(runner);

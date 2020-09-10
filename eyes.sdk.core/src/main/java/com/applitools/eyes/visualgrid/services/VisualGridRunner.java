@@ -241,7 +241,6 @@ public class VisualGridRunner extends EyesRunner {
                             nextTestToRender = getNextRenderingTask();
                             if (nextTestToRender == null) {
                                 renderingServiceLock.wait(500);
-//                                logger.verbose("Rendering service woke up");
                                 nextTestToRender = getNextRenderingTask();
                             }
 
@@ -252,7 +251,7 @@ public class VisualGridRunner extends EyesRunner {
                 }
                 return nextTestToRender;
             }
-        }, renderingServiceLock);
+        });
 
         this.eyesCheckerService = new EyesService("eyesCheckerService", servicesGroup, logger, this.concurrentOpenSessions, checkerServiceDebugLock, new EyesService.EyesServiceListener() {
             @Override
@@ -304,15 +303,20 @@ public class VisualGridRunner extends EyesRunner {
         if (this.renderingTaskList.isEmpty()) {
             return null;
         }
-        RenderingTask renderingTask = null;
+
         synchronized (this.renderingTaskList) {
-            if (!this.renderingTaskList.isEmpty()) {
-                renderingTask = this.renderingTaskList.get(0);
-                this.renderingTaskList.remove(renderingTask);
+            if (this.renderingTaskList.isEmpty()) {
+                return null;
+
             }
+
+            RenderingTask renderingTask = this.renderingTaskList.get(0);
+            if (!renderingTask.isReady()) {
+                return null;
+            }
+            this.renderingTaskList.remove(renderingTask);
+            return renderingTask;
         }
-//        logger.verbose("Starting to renderTask - " + renderingTask);
-        return renderingTask;
     }
 
     private FutureTask<TestResultContainer> getNextTestToClose() {
@@ -465,8 +469,8 @@ public class VisualGridRunner extends EyesRunner {
     }
 
     public synchronized void check(ICheckSettings settings, IDebugResourceWriter debugResourceWriter, FrameData domData,
-                                   IEyesConnector connector, List<VisualGridTask> visualGridTaskList,
-                                   List<VisualGridTask> openVisualGridTasks, final RenderListener listener,
+                                   IEyesConnector connector, List<VisualGridTask> checkVisualGridTasks,
+                                   final RenderListener listener,
                                    List<VisualGridSelector[]> selectors, UserAgent userAgent) {
 
         if (debugResourceWriter == null) {
@@ -476,8 +480,8 @@ public class VisualGridRunner extends EyesRunner {
             debugResourceWriter = new NullDebugResourceWriter();
         }
 
-        RenderingTask renderingTask = new RenderingTask(connector, domData, settings, visualGridTaskList,
-                openVisualGridTasks, this, debugResourceWriter, new RenderingTask.RenderTaskListener() {
+        RenderingTask renderingTask = new RenderingTask(connector, domData, settings, checkVisualGridTasks,
+                this, debugResourceWriter, new RenderingTask.RenderTaskListener() {
             @Override
             public void onRenderSuccess() {
                 logger.verbose("enter");

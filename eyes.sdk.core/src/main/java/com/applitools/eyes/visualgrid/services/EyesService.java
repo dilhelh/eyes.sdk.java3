@@ -8,7 +8,7 @@ import java.util.concurrent.*;
 
 public class EyesService extends Thread {
 
-    protected final int threadPoolSize;
+    protected final int testsPoolSize;
     protected ExecutorService executor;
     protected final EyesService.EyesServiceListener listener;
     private final Object debugLock;
@@ -35,10 +35,10 @@ public class EyesService extends Thread {
         FutureTask<TestResultContainer> getNextTask(Tasker tasker);
     }
 
-    public EyesService(String serviceName, ThreadGroup servicesGroup, Logger logger, int threadPoolSize, Object debugLock, EyesServiceListener listener, Tasker tasker) {
+    public EyesService(String serviceName, ThreadGroup servicesGroup, Logger logger, int testsPoolSize, Object debugLock, EyesServiceListener listener, Tasker tasker) {
         super(servicesGroup, serviceName);
-        this.threadPoolSize = threadPoolSize;
-        this.executor = new ThreadPoolExecutor(this.threadPoolSize, threadPoolSize, 1, TimeUnit.DAYS, new ArrayBlockingQueue<Runnable>(20));
+        this.testsPoolSize = testsPoolSize;
+        this.executor = new ThreadPoolExecutor(this.testsPoolSize, testsPoolSize, 1, TimeUnit.DAYS, new ArrayBlockingQueue<Runnable>(20));
         this.listener = listener;
         this.logger = logger;
         this.debugLock = debugLock;
