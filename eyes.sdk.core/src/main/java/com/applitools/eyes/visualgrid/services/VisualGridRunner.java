@@ -277,8 +277,10 @@ public class VisualGridRunner extends EyesRunner {
             synchronized (allEyes) {
                 for (IRenderingEyes eyes : allEyes) {
                     ScoreTask currentScoreTask = eyes.getBestScoreTaskForCheck();
+                    if (currentScoreTask == null) {
+                        continue;
+                    }
 
-                    if (currentScoreTask == null) continue;
                     int currentTestMark = currentScoreTask.getScore();
                     if (bestScore < currentTestMark) {
                         bestScoreTask = currentScoreTask;
@@ -343,7 +345,9 @@ public class VisualGridRunner extends EyesRunner {
                 } catch (Exception e) {
                     GeneralUtils.logExceptionStackTrace(logger, e);
                 }
-                if (currentTestMark == null) continue;
+                if (currentTestMark == null) {
+                    continue;
+                }
                 int currentScore = currentTestMark.getScore();
                 if (bestMark < currentScore) {
                     bestMark = currentScore;

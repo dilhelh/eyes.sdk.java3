@@ -447,7 +447,9 @@ public class VisualGridEyes implements ISeleniumEyes, IRenderingEyes {
             VisualGridTask visualGridTask;
             //noinspection SynchronizationOnLocalVariableOrMethodParameter
             synchronized (visualGridTaskList) {
-                if (visualGridTaskList.isEmpty()) continue;
+                if (visualGridTaskList.isEmpty()) {
+                    continue;
+                }
 
                 visualGridTask = visualGridTaskList.get(0);
                 if (!runningTest.isTestOpen() || visualGridTask.getType() != VisualGridTask.TaskType.CHECK || !visualGridTask.isTaskReadyToCheck())
@@ -457,7 +459,9 @@ public class VisualGridEyes implements ISeleniumEyes, IRenderingEyes {
 
             ScoreTask scoreTask = runningTest.getScoreTaskObjectByType(VisualGridTask.TaskType.CHECK);
 
-            if (scoreTask == null) continue;
+            if (scoreTask == null) {
+                continue;
+            }
 
             if (bestScore < scoreTask.getScore()) {
                 currentBest = scoreTask;
@@ -473,14 +477,14 @@ public class VisualGridEyes implements ISeleniumEyes, IRenderingEyes {
         ScoreTask currentBest = null;
         synchronized (testList) {
             for (RunningTest runningTest : testList) {
-
                 ScoreTask currentScoreTask = runningTest.getScoreTaskObjectByType(VisualGridTask.TaskType.OPEN);
-                if (currentScoreTask == null) continue;
+                if (currentScoreTask == null) {
+                    continue;
+                }
 
                 if (bestMark < currentScoreTask.getScore()) {
                     bestMark = currentScoreTask.getScore();
                     currentBest = currentScoreTask;
-
                 }
             }
         }

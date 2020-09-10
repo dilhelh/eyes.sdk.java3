@@ -170,8 +170,8 @@ public class RunningTest {
         if (!this.isTestOpen.get() && taskType == VisualGridTask.TaskType.CHECK) {
             return null;
         }
+
         int score = 0;
-        VisualGridTask chosenVisualGridTask;
         synchronized (this.visualGridTaskList) {
             for (VisualGridTask visualGridTask : this.visualGridTaskList) {
                 if (visualGridTask.isTaskReadyToCheck() && visualGridTask.getType() == VisualGridTask.TaskType.CHECK) {
@@ -183,14 +183,13 @@ public class RunningTest {
                 return null;
             }
 
-            chosenVisualGridTask = this.visualGridTaskList.get(0);
+            VisualGridTask chosenVisualGridTask = this.visualGridTaskList.get(0);
             if (chosenVisualGridTask.getType() != taskType || chosenVisualGridTask.isSent()) {
                 return null;
             }
 
-            chosenVisualGridTask.setIsSent();
+            return new ScoreTask(chosenVisualGridTask, score);
         }
-        return new ScoreTask(chosenVisualGridTask, score);
     }
 
     public synchronized FutureTask<TestResultContainer> getNextCloseTask() {
