@@ -545,8 +545,8 @@ public class VisualGridEyes implements ISeleniumEyes, IRenderingEyes {
 
             isCheckTimerTimedOut.set(false);
 
-            List<VisualGridTask> openVisualGridTasks = addOpenTaskToAllRunningTest();
-            List<VisualGridTask> visualGridTaskList = new ArrayList<>();
+            addOpenTaskToAllRunningTest();
+            List<VisualGridTask> checkVisualGridTasks = new ArrayList<>();
 
             FrameData scriptResult = captureDomSnapshot(originalFC, switchTo, checkSettingsInternal);
 
@@ -562,13 +562,13 @@ public class VisualGridEyes implements ISeleniumEyes, IRenderingEyes {
             String source = webDriver.getCurrentUrl();
             for (RunningTest runningTest : filteredTests) {
                 VisualGridTask checkVisualGridTask = runningTest.check((ICheckSettings) checkSettingsInternal, regionsXPaths, source);
-                visualGridTaskList.add(checkVisualGridTask);
+                checkVisualGridTasks.add(checkVisualGridTask);
             }
 
             logger.verbose("added check tasks  (" + checkSettingsInternal.toString() + ")");
 
             this.renderingGridRunner.check((ICheckSettings) checkSettingsInternal, debugResourceWriter, scriptResult,
-                    this.VGEyesConnector, visualGridTaskList, openVisualGridTasks,
+                    this.VGEyesConnector, checkVisualGridTasks,
                     new VisualGridRunner.RenderListener() {
                         @Override
                         public void onRenderSuccess() {
@@ -803,18 +803,14 @@ public class VisualGridEyes implements ISeleniumEyes, IRenderingEyes {
         frame.setScrollRootElement(rootElement);
     }
 
-    private synchronized List<VisualGridTask> addOpenTaskToAllRunningTest() {
+    private synchronized void addOpenTaskToAllRunningTest() {
         logger.verbose("enter");
-        List<VisualGridTask> visualGridTasks = new ArrayList<>();
         for (RunningTest runningTest : testList) {
             if (!runningTest.isOpenTaskIssued()) {
-                VisualGridTask visualGridTask = runningTest.open();
-                visualGridTasks.add(visualGridTask);
+                runningTest.open();
             }
         }
-        logger.verbose("calling addOpenTaskToAllRunningTest.open");
         logger.verbose("exit");
-        return visualGridTasks;
     }
 
     public Logger getLogger() {

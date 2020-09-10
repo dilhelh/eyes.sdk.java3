@@ -6,9 +6,8 @@ import com.applitools.eyes.IBatchCloser;
 import com.applitools.eyes.Logger;
 import com.applitools.eyes.TestResultContainer;
 import com.applitools.eyes.config.Configuration;
-import com.applitools.eyes.visualgrid.model.RenderBrowserInfo;
 import com.applitools.eyes.config.ConfigurationProvider;
-import com.applitools.eyes.visualgrid.model.RenderingTask;
+import com.applitools.eyes.visualgrid.model.RenderBrowserInfo;
 import com.applitools.eyes.visualgrid.model.VisualGridSelector;
 
 import java.util.*;
@@ -63,7 +62,7 @@ public class RunningTest {
         }
 
         @Override
-        public void onRenderComplete(RenderingTask renderingTask, Throwable error) {
+        public void onRenderComplete() {
             logger.verbose("enter");
             listener.onRenderComplete();
             logger.verbose("exit");
@@ -185,9 +184,11 @@ public class RunningTest {
             }
 
             chosenVisualGridTask = this.visualGridTaskList.get(0);
-            if (chosenVisualGridTask.getType() != taskType || chosenVisualGridTask.isSent() || (taskType == VisualGridTask.TaskType.OPEN && !chosenVisualGridTask.isTaskReadyToCheck())) {
+            if (chosenVisualGridTask.getType() != taskType || chosenVisualGridTask.isSent()) {
                 return null;
             }
+
+            chosenVisualGridTask.setIsSent();
         }
         return new ScoreTask(chosenVisualGridTask, score);
     }

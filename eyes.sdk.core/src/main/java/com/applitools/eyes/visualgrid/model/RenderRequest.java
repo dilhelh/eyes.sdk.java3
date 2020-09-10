@@ -17,7 +17,7 @@ public class RenderRequest {
     private String renderId;
 
     @JsonIgnore
-    private final VisualGridTask visualGridTask;
+    private final VisualGridTask checkVisualGridTask;
 
     @JsonInclude
     private String agentId;
@@ -60,7 +60,7 @@ public class RenderRequest {
 
     public RenderRequest(String webHook, String url, RGridDom dom, Map<String, RGridResource> resources, RenderInfo renderInfo,
                          String platform, BrowserType browserName, Object scriptHooks, List<VisualGridSelector> selectorsToFindRegionsFor,
-                         boolean sendDom, VisualGridTask visualGridTask, String stitchingService, List<VisualGridOption> visualGridOptions) {
+                         boolean sendDom, VisualGridTask checkVisualGridTask, String stitchingService, List<VisualGridOption> visualGridOptions) {
         this.webhook = webHook;
         this.url = url;
         this.dom = dom;
@@ -71,7 +71,7 @@ public class RenderRequest {
         this.scriptHooks = scriptHooks;
         this.selectorsToFindRegionsFor = selectorsToFindRegionsFor;
         this.sendDom = sendDom;
-        this.visualGridTask = visualGridTask;
+        this.checkVisualGridTask = checkVisualGridTask;
         this.stitchingService = stitchingService;
         this.agentId = "eyes.selenium.visualgrid.java/" + ClassVersionGetter.CURRENT_VERSION;
         this.options = new HashMap<>();
@@ -164,8 +164,8 @@ public class RenderRequest {
         return map;
     }
 
-    public VisualGridTask getVisualGridTask() {
-        return visualGridTask;
+    public VisualGridTask getCheckVisualGridTask() {
+        return checkVisualGridTask;
     }
 
     public String getWebhook() {
@@ -200,7 +200,7 @@ public class RenderRequest {
     public String toString() {
         return "RenderRequest{" +
                 "renderId='" + renderId + '\'' +
-                ", visualGridTask=" + visualGridTask +
+                ", visualGridTask=" + checkVisualGridTask +
                 ", agentId='" + agentId + '\'' +
                 ", webhook='" + webhook + '\'' +
                 ", url='" + url + '\'' +

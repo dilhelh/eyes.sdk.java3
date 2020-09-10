@@ -30,8 +30,7 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
     private final List<RenderTaskListener> listeners = new ArrayList<>();
     private final IEyesConnector eyesConnector;
     private final ICheckSettings checkSettings;
-    private final List<VisualGridTask> visualGridTaskList;
-    private List<VisualGridTask> openVisualGridTaskList;
+    private final List<VisualGridTask> checkTasks;
     private final RenderingInfo renderingInfo;
     private final UserAgent userAgent;
     final Map<String, RGridResource> fetchedCacheMap;
@@ -78,16 +77,16 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
     /**
      * For tests only
      */
-    RenderingTask(IEyesConnector eyesConnector, List<VisualGridTask> visualGridTaskList, UserAgent userAgent) {
-        this(eyesConnector, visualGridTaskList, userAgent, null);
+    RenderingTask(IEyesConnector eyesConnector, List<VisualGridTask> checkTasks, UserAgent userAgent) {
+        this(eyesConnector, checkTasks, userAgent, null);
     }
 
     /**
      * For tests only
      */
-    RenderingTask(IEyesConnector eyesConnector, List<VisualGridTask> visualGridTaskList, UserAgent userAgent, ICheckSettings checkSettings) {
+    RenderingTask(IEyesConnector eyesConnector, List<VisualGridTask> checkTasks, UserAgent userAgent, ICheckSettings checkSettings) {
         this.eyesConnector = eyesConnector;
-        this.visualGridTaskList = visualGridTaskList;
+        this.checkTasks = checkTasks;
         this.userAgent = userAgent;
         fetchedCacheMap = new HashMap<>();
         logger = new Logger();
@@ -98,14 +97,12 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
     }
 
     public RenderingTask(IEyesConnector eyesConnector, FrameData domData, ICheckSettings checkSettings,
-                         List<VisualGridTask> visualGridTaskList, List<VisualGridTask> openVisualGridTasks, VisualGridRunner renderingGridManager,
+                         List<VisualGridTask> checkTasks, VisualGridRunner renderingGridManager,
                          IDebugResourceWriter debugResourceWriter, RenderTaskListener listener, UserAgent userAgent, List<VisualGridSelector[]> regionSelectors) {
-
         this.eyesConnector = eyesConnector;
         this.domData = domData;
         this.checkSettings = checkSettings;
-        this.visualGridTaskList = visualGridTaskList;
-        this.openVisualGridTaskList = openVisualGridTasks;
+        this.checkTasks = checkTasks;
         this.renderingInfo = renderingGridManager.getRenderingInfo();
         this.fetchedCacheMap = renderingGridManager.getCachedResources();
         this.putResourceCache = renderingGridManager.getPutResourceCache();
@@ -121,8 +118,6 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
     @Override
     public RenderStatusResults call() {
         try {
-            addRenderingTaskToOpenTasks();
-
             logger.verbose("enter");
 
             logger.verbose("step 1");
@@ -208,21 +203,14 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
             pollRenderingStatus(mapping);
         } catch (Throwable e) {
             GeneralUtils.logExceptionStackTrace(logger, e);
-            for (VisualGridTask visualGridTask : this.visualGridTaskList) {
+            for (VisualGridTask visualGridTask : this.checkTasks) {
                 visualGridTask.setExceptionAndAbort(e);
             }
+            notifyFailAllListeners(new EyesException("Failed rendering", e));
         }
         logger.verbose("Finished rendering task - exit");
 
         return null;
-    }
-
-    private void addRenderingTaskToOpenTasks() {
-        if (this.openVisualGridTaskList != null) {
-            for (VisualGridTask visualGridTask : openVisualGridTaskList) {
-                visualGridTask.setRenderingTask(this);
-            }
-        }
     }
 
     private void forcePutAllResources(Map<String, RGridResource> resources, RGridDom dom, RunningRender runningRender) {
@@ -268,18 +256,19 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
 
     private void setRenderErrorToTasks(RenderRequest[] requests) {
         for (RenderRequest renderRequest : requests) {
-            for (VisualGridTask openTask : openVisualGridTaskList) {
-                if (openTask.getRunningTest() == renderRequest.getVisualGridTask().getRunningTest()) {
-                    openTask.setRenderError(null, "Invalid response for render request", renderRequest);
-                }
-            }
-            renderRequest.getVisualGridTask().setRenderError(null, "Invalid response for render request", renderRequest);
+            renderRequest.getCheckVisualGridTask().setRenderError(null, "Invalid response for render request");
         }
     }
 
     private void notifySuccessAllListeners() {
         for (RenderTaskListener listener : listeners) {
             listener.onRenderSuccess();
+        }
+    }
+
+    private void notifyFailAllListeners(Exception e) {
+        for (RenderTaskListener listener : listeners) {
+            listener.onRenderFailed(e);
         }
     }
 
@@ -412,9 +401,9 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
         }
 
         logger.verbose("region selectors count: " + regionSelectorsList.size());
-        logger.verbose("this.visualGridTaskList count: " + this.visualGridTaskList.size());
+        logger.verbose("check visual grid tasks count: " + this.checkTasks.size());
 
-        for (VisualGridTask visualGridTask : this.visualGridTaskList) {
+        for (VisualGridTask visualGridTask : this.checkTasks) {
 
             RenderBrowserInfo browserInfo = visualGridTask.getBrowserInfo();
 
@@ -487,8 +476,8 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
                 String renderId = renderedRender.getRenderId();
                 if (renderId.equalsIgnoreCase(id)) {
                     logger.verbose("removing failed render id: " + id);
-                    VisualGridTask visualGridTask = runningRenders.get(renderedRender).getVisualGridTask();
-                    visualGridTask.setRenderError(id, "too long rendering(rendering exceeded 150 sec)", renderRequest);
+                    VisualGridTask checkTask = renderRequest.getCheckVisualGridTask();
+                    checkTask.setRenderError(id, "too long rendering(rendering exceeded 150 sec)");
                     break;
                 }
             }
@@ -515,36 +504,20 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
             boolean isErrorStatus = renderStatus == RenderStatus.ERROR;
             logger.verbose("renderStatusResults - " + renderStatusResults);
             if (isRenderedStatus || isErrorStatus) {
-
                 String removedId = ids.remove(j);
-
                 for (Map.Entry<RunningRender, RenderRequest> kvp: runningRenders.entrySet()) {
                     RunningRender renderedRender = kvp.getKey();
                     RenderRequest renderRequest = kvp.getValue();
                     String renderId = renderedRender.getRenderId();
                     if (renderId.equalsIgnoreCase(removedId)) {
-                        VisualGridTask visualGridTask = runningRenders.get(renderedRender).getVisualGridTask();
-                        Iterator<VisualGridTask> iterator = openVisualGridTaskList.iterator();
-                        while (iterator.hasNext()) {
-                            VisualGridTask openVisualGridTask = iterator.next();
-                            if (openVisualGridTask.getRunningTest() == visualGridTask.getRunningTest()) {
-                                if (isRenderedStatus) {
-                                    logger.verbose("setting openVisualGridTask " + openVisualGridTask + " render result: " + renderStatusResults + " to url " + this.domData.getUrl());
-                                    openVisualGridTask.setRenderResult(renderStatusResults);
-                                } else {
-                                    logger.verbose("setting openVisualGridTask " + openVisualGridTask + " render error: " + removedId + " to url " + this.domData.getUrl());
-                                    openVisualGridTask.setRenderError(removedId, renderStatusResults.getError(), renderRequest);
-                                }
-                                iterator.remove();
-                            }
-                        }
-                        logger.verbose("setting visualGridTask " + visualGridTask + " render result: " + renderStatusResults + " to url " + this.domData.getUrl());
+                        VisualGridTask checkTask = renderRequest.getCheckVisualGridTask();
+                        logger.verbose("setting visualGridTask " + checkTask + " render result: " + renderStatusResults + " to url " + this.domData.getUrl());
                         String error = renderStatusResults.getError();
                         if (error != null) {
                             GeneralUtils.logExceptionStackTrace(logger, new Exception(error));
-                            visualGridTask.setRenderError(renderId, error, renderRequest);
+                            checkTask.setRenderError(renderId, error);
                         }
-                        visualGridTask.setRenderResult(renderStatusResults);
+                        checkTask.setRenderResult(renderStatusResults);
                         break;
                     }
                 }
@@ -555,14 +528,17 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
         logger.verbose("exit");
     }
 
-    public boolean getIsTaskComplete() {
+    public boolean isReady() {
+        return checkTasks.get(0).getRunningTest().isTestOpen();
+    }
+
+    public boolean isTaskComplete() {
         return isTaskComplete.get();
     }
 
     public void addListener(RenderTaskListener listener) {
         this.listeners.add(listener);
     }
-
 
     private class TimeoutTask extends TimerTask {
         @Override
