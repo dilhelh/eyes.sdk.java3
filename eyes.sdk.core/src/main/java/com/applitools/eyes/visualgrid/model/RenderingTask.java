@@ -256,7 +256,7 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
 
     private void setRenderErrorToTasks(RenderRequest[] requests) {
         for (RenderRequest renderRequest : requests) {
-            renderRequest.getCheckVisualGridTask().setRenderError(null, "Invalid response for render request");
+            renderRequest.getCheckTask().setRenderError(null, "Invalid response for render request");
         }
     }
 
@@ -476,7 +476,7 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
                 String renderId = renderedRender.getRenderId();
                 if (renderId.equalsIgnoreCase(id)) {
                     logger.verbose("removing failed render id: " + id);
-                    VisualGridTask checkTask = renderRequest.getCheckVisualGridTask();
+                    VisualGridTask checkTask = renderRequest.getCheckTask();
                     checkTask.setRenderError(id, "too long rendering(rendering exceeded 150 sec)");
                     break;
                 }
@@ -510,7 +510,7 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
                     RenderRequest renderRequest = kvp.getValue();
                     String renderId = renderedRender.getRenderId();
                     if (renderId.equalsIgnoreCase(removedId)) {
-                        VisualGridTask checkTask = renderRequest.getCheckVisualGridTask();
+                        VisualGridTask checkTask = renderRequest.getCheckTask();
                         logger.verbose("setting visualGridTask " + checkTask + " render result: " + renderStatusResults + " to url " + this.domData.getUrl());
                         String error = renderStatusResults.getError();
                         if (error != null) {

@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 
 public class RenderingGridService extends Thread {
 
+    private static final int FACTOR = 5;
     private final Object debugLock;
     private final RGServiceListener listener;
     private boolean isServiceOn = true;
@@ -32,7 +33,7 @@ public class RenderingGridService extends Thread {
 
     RenderingGridService(String serviceName, ThreadGroup servicesGroup, Logger logger, int threadPoolSize, Object debugLock, RGServiceListener listener) {
         super(servicesGroup, serviceName);
-        this.executor = new ThreadPoolExecutor(threadPoolSize, threadPoolSize, 1, TimeUnit.DAYS, new ArrayBlockingQueue<Runnable>(20));
+        this.executor = new ThreadPoolExecutor(threadPoolSize, threadPoolSize * FACTOR, 1, TimeUnit.DAYS, new ArrayBlockingQueue<Runnable>(20));
         this.debugLock = debugLock;
         this.listener = listener;
         this.logger = logger;
