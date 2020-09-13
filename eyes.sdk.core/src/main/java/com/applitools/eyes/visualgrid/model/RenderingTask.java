@@ -1,7 +1,5 @@
 package com.applitools.eyes.visualgrid.model;
 
-import com.applitools.ICheckSettings;
-import com.applitools.ICheckSettingsInternal;
 import com.applitools.eyes.EyesException;
 import com.applitools.eyes.Logger;
 import com.applitools.eyes.TaskListener;
@@ -19,29 +17,22 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-@SuppressWarnings("WeakerAccess")
 public class RenderingTask implements Callable<RenderStatusResults>, CompletableTask {
 
     private static final int FETCH_TIMEOUT_SECONDS = 60;
-    public static final String FULLPAGE = "full-page";
-    public static final String VIEWPORT = "viewport";
     public static final int HOUR = 60 * 60 * 1000;
 
     private final List<RenderTaskListener> listeners = new ArrayList<>();
     private final IEyesConnector eyesConnector;
-    private final ICheckSettings checkSettings;
-    private final List<VisualGridTask> checkTasks;
-    private final RenderingInfo renderingInfo;
+    final RenderRequest renderRequest;
+    private final VisualGridTask checkTask;
     private final UserAgent userAgent;
     final Map<String, RGridResource> fetchedCacheMap;
     final Map<String, RGridResource> putResourceCache;
     private final Logger logger;
     private final AtomicBoolean isTaskComplete = new AtomicBoolean(false);
     private AtomicBoolean isForcePutNeeded;
-    private final List<VisualGridSelector[]> regionSelectors;
-    private IDebugResourceWriter debugResourceWriter;
-    private FrameData domData;
-    private RGridDom dom = null;
+    private String pageUrl;
     private final Timer timer = new Timer("VG_StopWatch", true);
     private final AtomicBoolean isTimeElapsed = new AtomicBoolean(false);
 
@@ -77,39 +68,27 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
     /**
      * For tests only
      */
-    RenderingTask(IEyesConnector eyesConnector, List<VisualGridTask> checkTasks, UserAgent userAgent) {
-        this(eyesConnector, checkTasks, userAgent, null);
-    }
-
-    /**
-     * For tests only
-     */
-    RenderingTask(IEyesConnector eyesConnector, List<VisualGridTask> checkTasks, UserAgent userAgent, ICheckSettings checkSettings) {
+    RenderingTask(IEyesConnector eyesConnector, RenderRequest renderRequest, VisualGridTask checkTask, UserAgent userAgent) {
         this.eyesConnector = eyesConnector;
-        this.checkTasks = checkTasks;
+        this.renderRequest = renderRequest;
+        this.checkTask = checkTask;
         this.userAgent = userAgent;
         fetchedCacheMap = new HashMap<>();
         logger = new Logger();
-        regionSelectors = new ArrayList<>();
         putResourceCache = new HashMap<>();
-        this.checkSettings = checkSettings;
-        this.renderingInfo = new RenderingInfo();
     }
 
-    public RenderingTask(IEyesConnector eyesConnector, FrameData domData, ICheckSettings checkSettings,
-                         List<VisualGridTask> checkTasks, VisualGridRunner renderingGridManager,
-                         IDebugResourceWriter debugResourceWriter, RenderTaskListener listener, UserAgent userAgent, List<VisualGridSelector[]> regionSelectors) {
+    public RenderingTask(IEyesConnector eyesConnector, String pageUrl, RenderRequest renderRequest,
+                         VisualGridTask checkTask, VisualGridRunner renderingGridManager,
+                         RenderTaskListener listener, UserAgent userAgent) {
         this.eyesConnector = eyesConnector;
-        this.domData = domData;
-        this.checkSettings = checkSettings;
-        this.checkTasks = checkTasks;
-        this.renderingInfo = renderingGridManager.getRenderingInfo();
+        this.pageUrl = pageUrl;
+        this.renderRequest = renderRequest;
+        this.checkTask = checkTask;
         this.fetchedCacheMap = renderingGridManager.getCachedResources();
         this.putResourceCache = renderingGridManager.getPutResourceCache();
         this.logger = renderingGridManager.getLogger();
-        this.debugResourceWriter = debugResourceWriter;
         this.userAgent = userAgent;
-        this.regionSelectors = regionSelectors;
         this.listeners.add(listener);
         String renderingGridForcePut = GeneralUtils.getEnvString("APPLITOOLS_RENDERING_GRID_FORCE_PUT");
         this.isForcePutNeeded = new AtomicBoolean(renderingGridForcePut != null && renderingGridForcePut.equalsIgnoreCase("true"));
@@ -121,44 +100,37 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
             logger.verbose("enter");
 
             logger.verbose("step 1");
-
-            RenderRequest[] requests = prepareDataForRG(domData);
-
-            logger.verbose("step 2");
             boolean stillRunning;
             long elapsedTimeStart = System.currentTimeMillis();
             boolean isForcePutAlreadyDone = false;
             List<RunningRender> runningRenders;
             do {
                 try {
-                    runningRenders = this.eyesConnector.render(requests);
+                    runningRenders = this.eyesConnector.render(renderRequest);
                 } catch (Exception e) {
                     GeneralUtils.logExceptionStackTrace(logger, e);
                     logger.verbose("/render throws exception... sleeping for 1.5s");
                     logger.verbose("ERROR " + e.getMessage());
                     Thread.sleep(1500);
                     try {
-                        runningRenders = this.eyesConnector.render(requests);
+                        runningRenders = this.eyesConnector.render(renderRequest);
                     } catch (Exception e1) {
-                        setRenderErrorToTasks(requests);
+                        setRenderErrorToTasks();
                         throw new EyesException("Invalid response for render request", e1);
                     }
                 }
 
-                logger.verbose("step 3.1");
+                logger.verbose("step 2.1");
                 if (runningRenders == null || runningRenders.size() == 0) {
-                    setRenderErrorToTasks(requests);
+                    setRenderErrorToTasks();
                     throw new EyesException("Invalid response for render request");
                 }
 
-                for (int i = 0; i < requests.length; i++) {
-                    RenderRequest request = requests[i];
-                    request.setRenderId(runningRenders.get(i).getRenderId());
-                    logger.verbose(String.format("RunningRender: %s", runningRenders.get(i)));
-                }
-                logger.verbose("step 3.2");
-
                 RunningRender runningRender = runningRenders.get(0);
+                renderRequest.setRenderId(runningRender.getRenderId());
+                logger.verbose(String.format("RunningRender: %s", runningRender));
+                logger.verbose("step 2.2");
+
                 RenderStatus worstStatus = runningRender.getRenderStatus();
 
                 worstStatus = calcWorstStatus(runningRenders, worstStatus);
@@ -166,7 +138,7 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
                 boolean isNeedMoreDom = runningRender.isNeedMoreDom();
 
                 if (isForcePutNeeded.get() && !isForcePutAlreadyDone) {
-                    forcePutAllResources(requests[0].getResources(), requests[0].getDom(), runningRender);
+                    forcePutAllResources(renderRequest.getResources(), renderRequest.getDom(), runningRender);
                     isForcePutAlreadyDone = true;
                     try {
                         if (resourcesPhaser.getRegisteredParties() > 0) {
@@ -178,11 +150,11 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
                     }
                 }
 
-                logger.verbose("step 3.3");
+                logger.verbose("step 2.3");
                 double elapsedTime = ((double) System.currentTimeMillis() - elapsedTimeStart) / 1000;
                 stillRunning = (worstStatus == RenderStatus.NEED_MORE_RESOURCE || isNeedMoreDom) && elapsedTime < FETCH_TIMEOUT_SECONDS;
                 if (stillRunning) {
-                    sendMissingResources(runningRenders, requests[0].getDom(), requests[0].getResources(), isNeedMoreDom);
+                    sendMissingResources(runningRenders, renderRequest.getDom(), renderRequest.getResources(), isNeedMoreDom);
                     try {
                         if (resourcesPhaser.getRegisteredParties() > 0) {
                             resourcesPhaser.awaitAdvanceInterruptibly(0, 30, TimeUnit.SECONDS);
@@ -193,19 +165,18 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
                     }
                 }
 
-                logger.verbose("step 3.4");
+                logger.verbose("step 2.4");
 
             } while (stillRunning);
 
-            Map<RunningRender, RenderRequest> mapping = mapRequestToRunningRender(runningRenders, requests);
+            Map<RunningRender, RenderRequest> mapping = new HashMap<>();
+            mapping.put(runningRenders.get(0), renderRequest);
 
-            logger.verbose("step 4");
+            logger.verbose("step 3");
             pollRenderingStatus(mapping);
         } catch (Throwable e) {
             GeneralUtils.logExceptionStackTrace(logger, e);
-            for (VisualGridTask visualGridTask : this.checkTasks) {
-                visualGridTask.setExceptionAndAbort(e);
-            }
+            checkTask.setExceptionAndAbort(e);
             notifyFailAllListeners(new EyesException("Failed rendering", e));
         }
         logger.verbose("Finished rendering task - exit");
@@ -225,11 +196,9 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
         for (String url : strings) {
             try {
                 logger.verbose("trying to get url from map - " + url);
-                RGridResource resource = null;
+                RGridResource resource;
                 if (!fetchedCacheMap.containsKey(url)) {
-                    if (url.equals(this.dom.getUrl())) {
-                        resource = this.dom.asResource();
-                    }
+                    resource = resources.get(url);
                 } else {
                     resource = fetchedCacheMap.get(url);
                 }
@@ -254,10 +223,8 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
         }
     }
 
-    private void setRenderErrorToTasks(RenderRequest[] requests) {
-        for (RenderRequest renderRequest : requests) {
-            renderRequest.getCheckTask().setRenderError(null, "Invalid response for render request");
-        }
+    private void setRenderErrorToTasks() {
+        renderRequest.getCheckTask().setRenderError(null, "Invalid response for render request");
     }
 
     private void notifySuccessAllListeners() {
@@ -270,16 +237,6 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
         for (RenderTaskListener listener : listeners) {
             listener.onRenderFailed(e);
         }
-    }
-
-    private Map<RunningRender, RenderRequest> mapRequestToRunningRender(List<RunningRender> runningRenders, RenderRequest[] requests) {
-        Map<RunningRender, RenderRequest> mapping = new HashMap<>();
-        for (int i = 0; i < requests.length; i++) {
-            RenderRequest request = requests[i];
-            RunningRender runningRender = runningRenders.get(i);
-            mapping.put(runningRender, request);
-        }
-        return mapping;
     }
 
     private RenderStatus calcWorstStatus(List<RunningRender> runningRenders, RenderStatus worstStatus) {
@@ -359,76 +316,6 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
         }
     }
 
-    RenderRequest[] prepareDataForRG(FrameData domData) {
-        DomAnalyzer domAnalyzer = new DomAnalyzer(logger, eyesConnector.getServerConnector(), debugResourceWriter, domData, fetchedCacheMap, userAgent);
-        Map<String, RGridResource> resourceMap = domAnalyzer.analyze();
-        List<RenderRequest> allRequestsForRG = buildRenderRequests(domData, resourceMap);
-
-        RenderRequest[] asArray = allRequestsForRG.toArray(new RenderRequest[0]);
-
-        if (debugResourceWriter != null && !(debugResourceWriter instanceof NullDebugResourceWriter)) {
-            for (RenderRequest renderRequest : asArray) {
-                try {
-                    debugResourceWriter.write(renderRequest.getDom().asResource());
-                } catch (JsonProcessingException e) {
-                    GeneralUtils.logExceptionStackTrace(logger, e);
-                }
-                for (RGridResource value : renderRequest.getResources().values()) {
-                    this.debugResourceWriter.write(value);
-                }
-            }
-        }
-
-        logger.verbose("exit - returning renderRequest array of length: " + asArray.length);
-        return asArray;
-    }
-
-    private List<RenderRequest> buildRenderRequests(FrameData result, Map<String, RGridResource> resourceMapping) {
-
-        RGridDom dom = new RGridDom(result.getCdt(), resourceMapping, result.getUrl(), logger, "buildRenderRequests");
-
-        this.dom = dom;
-
-        //Create RG requests
-        List<RenderRequest> allRequestsForRG = new ArrayList<>();
-        ICheckSettingsInternal checkSettingsInternal = (ICheckSettingsInternal) this.checkSettings;
-
-
-        List<VisualGridSelector> regionSelectorsList = new ArrayList<>();
-
-        for (VisualGridSelector[] regionSelector : this.regionSelectors) {
-            regionSelectorsList.addAll(Arrays.asList(regionSelector));
-        }
-
-        logger.verbose("region selectors count: " + regionSelectorsList.size());
-        logger.verbose("check visual grid tasks count: " + this.checkTasks.size());
-
-        for (VisualGridTask visualGridTask : this.checkTasks) {
-
-            RenderBrowserInfo browserInfo = visualGridTask.getBrowserInfo();
-
-            String sizeMode = checkSettingsInternal.getSizeMode();
-
-            if (sizeMode.equalsIgnoreCase(VIEWPORT) && checkSettingsInternal.isStitchContent()) {
-                sizeMode = FULLPAGE;
-            }
-
-            RenderInfo renderInfo = new RenderInfo(browserInfo.getWidth(), browserInfo.getHeight(),
-                    sizeMode, checkSettingsInternal.getTargetRegion(), checkSettingsInternal.getVGTargetSelector(),
-                    browserInfo.getEmulationInfo(), browserInfo.getIosDeviceInfo());
-
-            RenderRequest request = new RenderRequest(this.renderingInfo.getResultsUrl(), result.getUrl(), dom,
-                    resourceMapping, renderInfo, browserInfo.getPlatform(), browserInfo.getBrowserType(),
-                    checkSettingsInternal.getScriptHooks(), regionSelectorsList, checkSettingsInternal.isSendDom(),
-                    visualGridTask, this.renderingInfo.getStitchingServiceUrl(), checkSettingsInternal.getVisualGridOptions());
-
-            allRequestsForRG.add(request);
-        }
-
-        logger.verbose("count of all requests for RG: " + allRequestsForRG.size());
-        return allRequestsForRG;
-    }
-
     private void pollRenderingStatus(Map<RunningRender, RenderRequest> runningRenders) {
         logger.verbose("enter");
         List<String> ids = getRenderIds(runningRenders.keySet());
@@ -483,8 +370,7 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
             }
         }
 
-        ICheckSettingsInternal rcInternal = (ICheckSettingsInternal) checkSettings;
-        logger.verbose("marking task as complete: " + rcInternal.getName());
+        logger.verbose("marking task as complete: " + pageUrl);
         this.isTaskComplete.set(true);
         this.notifySuccessAllListeners();
         logger.verbose("exit");
@@ -511,7 +397,7 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
                     String renderId = renderedRender.getRenderId();
                     if (renderId.equalsIgnoreCase(removedId)) {
                         VisualGridTask checkTask = renderRequest.getCheckTask();
-                        logger.verbose("setting visualGridTask " + checkTask + " render result: " + renderStatusResults + " to url " + this.domData.getUrl());
+                        logger.verbose("setting visualGridTask " + checkTask + " render result: " + renderStatusResults + " to url " + pageUrl);
                         String error = renderStatusResults.getError();
                         if (error != null) {
                             GeneralUtils.logExceptionStackTrace(logger, new Exception(error));
@@ -529,7 +415,7 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
     }
 
     public boolean isReady() {
-        return checkTasks.get(0).getRunningTest().isTestOpen();
+        return checkTask.getRunningTest().isTestOpen();
     }
 
     public boolean isTaskComplete() {
