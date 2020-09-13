@@ -338,12 +338,12 @@ public class TestRenderings extends ReportingTestSuite {
 
         RGridResource missingResource = missingResources.get(missingUrl);
         Assert.assertEquals(missingResource.getUrl(), missingUrl);
-        Assert.assertEquals(missingResource.getContent().length, 0);
+        Assert.assertNull(missingResource.getContent());
         Assert.assertEquals(missingResource.getContentType(), "application/empty-response");
 
         RGridResource unknownHostResource = missingResources.get(unknownHostUrl);
         Assert.assertEquals(unknownHostResource.getUrl(), unknownHostUrl);
-        Assert.assertEquals(unknownHostResource.getContent().length, 0);
+        Assert.assertNull(unknownHostResource.getContent());
         Assert.assertEquals(unknownHostResource.getContentType(), "application/empty-response");
     }
 
