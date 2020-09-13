@@ -172,7 +172,7 @@ public class TestRenderings extends ReportingTestSuite {
         com.applitools.eyes.selenium.Configuration config = eyes.getConfiguration();
         config.addBrowser(new DesktopBrowserInfo(new RectangleSize(700, 460), BrowserType.CHROME));
         config.addDeviceEmulation(DeviceName.Galaxy_S3);
-        config.addBrowser(new IosDeviceInfo(IosDeviceName.iPhone_11_Pro));
+        config.addBrowser(new IosDeviceInfo(IosDeviceName.iPhone_11_Pro, ScreenOrientation.LANDSCAPE));
         config.addBrowser(new IosDeviceInfo(IosDeviceName.iPhone_XR));
         config.setBatch(TestDataProvider.batchInfo);
         config.setAppName("Applitools Eyes Sdk");
@@ -227,7 +227,7 @@ public class TestRenderings extends ReportingTestSuite {
 
         Assert.assertEquals(testResults[0].getHostDisplaySize(), new RectangleSize(700, 460));
         Assert.assertEquals(testResults[1].getHostDisplaySize(), new RectangleSize(360, 640));
-        Assert.assertEquals(testResults[2].getHostDisplaySize(), new RectangleSize(375, 812));
+        Assert.assertEquals(testResults[2].getHostDisplaySize(), new RectangleSize(812, 375));
         Assert.assertEquals(testResults[3].getHostDisplaySize(), new RectangleSize(414, 896));
     }
 
