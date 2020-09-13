@@ -65,7 +65,7 @@ public class ResourceCollectionTask implements Callable<TestResultContainer> {
         this.userAgent = userAgent;
         this.checkSettings = checkSettings;
         this.checkTasks = checkTasks;
-        this.renderingInfo = new RenderingInfo();
+        this.renderingInfo = runner.getRenderingInfo();
         this.regionSelectors = regionSelectors;
         this.debugResourceWriter = debugResourceWriter;
         this.listener = listener;
