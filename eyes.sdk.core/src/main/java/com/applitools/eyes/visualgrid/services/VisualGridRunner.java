@@ -124,7 +124,6 @@ public class VisualGridRunner extends EyesRunner {
             VisualGridTask.TaskType type = visualGridTask.getType();
             try {
                 switch (type) {
-
                     case OPEN:
                         logger.verbose("locking eyesToOpenList");
                         synchronized (eyesToOpenList) {

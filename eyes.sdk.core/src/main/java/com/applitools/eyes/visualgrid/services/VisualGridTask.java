@@ -104,6 +104,9 @@ public class VisualGridTask implements Callable<TestResultContainer>, Completabl
                     logger.verbose("VisualGridTask.run opening task");
                     String userAgent = getUserAgent();
                     RectangleSize deviceSize = getCorrectDeviceSize();
+                    if (deviceSize == null) {
+                        deviceSize = RectangleSize.EMPTY;
+                    }
                     deviceSize = deviceSize.isEmpty() ? getBrowserInfo().getViewportSize() : deviceSize;
                     logger.verbose("device size: " + deviceSize);
                     eyesConnector.setUserAgent(userAgent);
@@ -280,7 +283,7 @@ public class VisualGridTask implements Callable<TestResultContainer>, Completabl
             return devicesSizes.get(deviceName).getPortrait();
         }
 
-        return devicesSizes.get(deviceName).getLandscapeLeft();
+        return devicesSizes.get(deviceName).getLandscape();
     }
 
     public Throwable getException() {
