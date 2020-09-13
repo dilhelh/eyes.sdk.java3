@@ -33,6 +33,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
@@ -182,7 +183,7 @@ public class TestRenderingTask extends ReportingTestSuite {
         when(visualGridTask.getEyesConnector()).thenReturn(eyesConnector);
         UserAgent userAgent = mock(UserAgent.class);
         when(userAgent.getOriginalUserAgentString()).thenReturn("");
-        final RenderingTask renderingTask = new RenderingTask(eyesConnector, Collections.singletonList(visualGridTask), userAgent);
+        final RenderingTask renderingTask = new RenderingTask(eyesConnector, null, visualGridTask, userAgent);
 
         when(eyesConnector.renderPutResource(any(RunningRender.class), any(RGridResource.class), anyString(), ArgumentMatchers.<TaskListener<Boolean>>any()))
                 .thenAnswer(new Answer<Future<?>>() {
@@ -223,12 +224,7 @@ public class TestRenderingTask extends ReportingTestSuite {
         when(checkSettings.getSizeMode()).thenReturn("viewport");
         when(checkSettings.isStitchContent()).thenReturn(true);
 
-        RenderingTask renderingTask = new RenderingTask(eyesConnector, Collections.singletonList(visualGridTask), userAgent, checkSettings);
         List<String> urls = Arrays.asList("http://1.com", "http://2.com", "http://3.com");
-        for (String url : urls) {
-            renderingTask.fetchedCacheMap.put(url, RGridResource.createEmpty(url));
-        }
-
         FrameData frameData = new FrameData();
         frameData.setUrl("http://random.com");
         frameData.setResourceUrls(urls);
@@ -236,8 +232,28 @@ public class TestRenderingTask extends ReportingTestSuite {
         frameData.setFrames(new ArrayList<FrameData>());
         frameData.setCdt(new ArrayList<CdtData>());
         frameData.setSrcAttr("");
-        RenderRequest[] renderRequests = renderingTask.prepareDataForRG(frameData);
-        Map<String, RGridResource> resourceMap = renderRequests[0].getResources();
+
+        final AtomicReference<List<RenderingTask>> reference = new AtomicReference<>();
+        ResourceCollectionTask resourceCollectionTask = new ResourceCollectionTask(eyesConnector,
+                Collections.singletonList(visualGridTask), frameData, userAgent, checkSettings, new TaskListener<List<RenderingTask>>() {
+            @Override
+            public void onComplete(List<RenderingTask> renderingTasks) {
+                reference.set(renderingTasks);
+            }
+
+            @Override
+            public void onFail() {
+
+            }
+        });
+
+        for (String url : urls) {
+            resourceCollectionTask.fetchedCacheMap.put(url, RGridResource.createEmpty(url));
+        }
+
+        resourceCollectionTask.call();
+
+        Map<String, RGridResource> resourceMap = reference.get().get(0).renderRequest.getResources();
         Assert.assertEquals(resourceMap.keySet(), new HashSet<>(urls));
     }
 

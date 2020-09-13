@@ -80,7 +80,6 @@ public class RenderingGridService extends Thread {
             @Override
             public void onRenderSuccess() {
                 debugNotify();
-
             }
 
             @Override
