@@ -194,23 +194,25 @@ public class RunningTest {
 
     public synchronized FutureTask<TestResultContainer> getNextCloseTask() {
         logger.verbose("enter");
-        if (!visualGridTaskList.isEmpty() && isCloseTaskIssued.get()) {
-            VisualGridTask visualGridTask = visualGridTaskList.get(0);
-            VisualGridTask.TaskType type = visualGridTask.getType();
-            if (type != VisualGridTask.TaskType.CLOSE && type != VisualGridTask.TaskType.ABORT) {
-                return null;
-            }
-            logger.verbose("locking visualGridTaskList");
-            synchronized (visualGridTaskList) {
-                logger.verbose("removing visualGridTask " + visualGridTask.toString() + " and exiting");
-                visualGridTaskList.remove(visualGridTask);
-                logger.verbose("tasks in visualGridTaskList: " + visualGridTaskList.size());
-            }
-            logger.verbose("releasing visualGridTaskList");
-            return taskToFutureMapping.get(visualGridTask);
+        if (visualGridTaskList.isEmpty() || !isCloseTaskIssued.get()) {
+            logger.verbose("exit with null");
+            return null;
         }
-        logger.verbose("exit with null");
-        return null;
+
+        VisualGridTask visualGridTask = visualGridTaskList.get(0);
+        VisualGridTask.TaskType type = visualGridTask.getType();
+        if (type != VisualGridTask.TaskType.CLOSE && type != VisualGridTask.TaskType.ABORT) {
+            return null;
+        }
+
+        logger.verbose("locking visualGridTaskList");
+        synchronized (visualGridTaskList) {
+            logger.verbose("removing visualGridTask " + visualGridTask.toString() + " and exiting");
+            visualGridTaskList.remove(visualGridTask);
+            logger.verbose("tasks in visualGridTaskList: " + visualGridTaskList.size());
+        }
+        logger.verbose("releasing visualGridTaskList");
+        return taskToFutureMapping.get(visualGridTask);
     }
 
     public RenderBrowserInfo getBrowserInfo() {

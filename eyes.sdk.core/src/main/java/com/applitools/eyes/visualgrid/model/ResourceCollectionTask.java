@@ -97,7 +97,7 @@ public class ResourceCollectionTask implements Callable<TestResultContainer> {
             for (int i = 0; i < renderRequests.size(); i++) {
                 VisualGridTask checkTask = checkTasks.get(i);
                 checkTask.setReadyForRender();
-                renderingTasks.add(new RenderingTask(eyesConnector, domData.getUrl(), renderRequests.get(i),
+                renderingTasks.add(new RenderingTask(eyesConnector, renderRequests.get(i),
                         checkTask, runner, renderTaskListener, userAgent));
             }
             listener.onComplete(renderingTasks);

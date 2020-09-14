@@ -145,6 +145,7 @@ public class TestRenderings extends ReportingTestSuite {
         conf.addBrowser(new DesktopBrowserInfo(new RectangleSize(800, 800), BrowserType.SAFARI));
         eyes.setConfiguration(conf);
         eyes.setLogHandler(new StdoutLogHandler());
+        eyes.setSaveNewTests(false);
         ChromeDriver driver = SeleniumUtils.createChromeDriver();
         driver.get("http://applitools.github.io/demo");
         try {

@@ -13,6 +13,7 @@ import com.applitools.eyes.fluent.CheckSettings;
 import com.applitools.eyes.selenium.BrowserType;
 import com.applitools.eyes.utils.ReportingTestSuite;
 import com.applitools.eyes.visualgrid.services.IEyesConnector;
+import com.applitools.eyes.visualgrid.services.VisualGridRunner;
 import com.applitools.eyes.visualgrid.services.VisualGridTask;
 import com.applitools.utils.GeneralUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -183,7 +184,9 @@ public class TestRenderingTask extends ReportingTestSuite {
         when(visualGridTask.getEyesConnector()).thenReturn(eyesConnector);
         UserAgent userAgent = mock(UserAgent.class);
         when(userAgent.getOriginalUserAgentString()).thenReturn("");
-        final RenderingTask renderingTask = new RenderingTask(eyesConnector, null, visualGridTask, userAgent, null);
+        RenderRequest renderRequest = mock(RenderRequest.class);
+        final RenderingTask renderingTask = new RenderingTask(eyesConnector, renderRequest, visualGridTask,
+                new VisualGridRunner(10), null, userAgent);
 
         when(eyesConnector.renderPutResource(any(RunningRender.class), any(RGridResource.class), anyString(), ArgumentMatchers.<TaskListener<Boolean>>any()))
                 .thenAnswer(new Answer<Future<?>>() {
@@ -207,7 +210,8 @@ public class TestRenderingTask extends ReportingTestSuite {
         resourceMap.put("2", new RGridResource("2", "", "2".getBytes()));
         resourceMap.put("3", new RGridResource("3", "", "3".getBytes()));
         resourceMap.put("4", new RGridResource("4", "", "4".getBytes()));
-        renderingTask.createPutFutures(runningRender, resourceMap);
+        when(renderRequest.getResources()).thenReturn(resourceMap);
+        renderingTask.uploadResources(Collections.singletonList(runningRender), false);
         renderingTask.resourcesPhaser.awaitAdvanceInterruptibly(0, 30, TimeUnit.SECONDS);
     }
 
@@ -253,7 +257,7 @@ public class TestRenderingTask extends ReportingTestSuite {
 
         resourceCollectionTask.call();
 
-        Map<String, RGridResource> resourceMap = reference.get().get(0).renderRequest.getResources();
+        Map<String, RGridResource> resourceMap = reference.get().get(0).renderRequests.get(0).getResources();
         Assert.assertEquals(resourceMap.keySet(), new HashSet<>(urls));
     }
 

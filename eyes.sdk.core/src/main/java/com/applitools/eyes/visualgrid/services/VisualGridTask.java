@@ -14,9 +14,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.atomic.AtomicBoolean;
 
-public class VisualGridTask implements Callable<TestResultContainer>, CompletableTask {
+public class VisualGridTask implements Callable<TestResultContainer> {
 
 
     private final Logger logger;
@@ -38,7 +37,6 @@ public class VisualGridTask implements Callable<TestResultContainer>, Completabl
 
     private final RunningTest runningTest;
     private Throwable exception;
-    private final AtomicBoolean isTaskComplete = new AtomicBoolean(false);
 
     private final List<VisualGridSelector[]> regionSelectors;
 
@@ -175,7 +173,6 @@ public class VisualGridTask implements Callable<TestResultContainer>, Completabl
 
             TestResultContainer testResultContainer = new TestResultContainer(testResults, runningTest.getBrowserInfo(), this.exception);
             notifySuccessAllListeners();
-            this.isTaskComplete.set(true);
             return testResultContainer;
         } catch (Throwable e) {
             GeneralUtils.logExceptionStackTrace(logger, e);
@@ -225,10 +222,6 @@ public class VisualGridTask implements Callable<TestResultContainer>, Completabl
 
     public RunningTest getRunningTest() {
         return runningTest;
-    }
-
-    public boolean isTaskComplete() {
-        return isTaskComplete.get();
     }
 
     public void addListener(VGTaskListener listener) {

@@ -304,12 +304,30 @@ public class VisualGridRunner extends EyesRunner {
 
             }
 
-            RenderingTask renderingTask = this.renderingTaskList.get(0);
-            if (!renderingTask.isReady()) {
-                return null;
+            RenderingTask finalRenderingTask = null;
+            List<RenderingTask> chosenTasks = new ArrayList<>();
+            for (RenderingTask renderingTask : this.renderingTaskList) {
+                if (!renderingTask.isReady()) {
+                    continue;
+                }
+
+                if (finalRenderingTask == null) {
+                    finalRenderingTask = renderingTask;
+                } else {
+                    finalRenderingTask.merge(renderingTask);
+                }
+
+                chosenTasks.add(renderingTask);
             }
-            this.renderingTaskList.remove(renderingTask);
-            return renderingTask;
+
+            finalRenderingTask =  finalRenderingTask != null && finalRenderingTask.isReady() ? finalRenderingTask : null;
+
+            if (finalRenderingTask != null) {
+                logger.verbose(String.format("Next rendering task contains %d render requests", chosenTasks.size()));
+                this.renderingTaskList.removeAll(chosenTasks);
+            }
+
+            return finalRenderingTask;
         }
     }
 
