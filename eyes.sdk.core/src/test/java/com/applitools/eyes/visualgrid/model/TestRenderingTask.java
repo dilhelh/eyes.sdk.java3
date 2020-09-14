@@ -186,17 +186,16 @@ public class TestRenderingTask extends ReportingTestSuite {
         when(userAgent.getOriginalUserAgentString()).thenReturn("");
         RenderRequest renderRequest = mock(RenderRequest.class);
         final RenderingTask renderingTask = new RenderingTask(eyesConnector, renderRequest, visualGridTask,
-                new VisualGridRunner(10), null, userAgent);
+                new VisualGridRunner(10), null);
 
-        when(eyesConnector.renderPutResource(any(RunningRender.class), any(RGridResource.class), anyString(), ArgumentMatchers.<TaskListener<Boolean>>any()))
+        when(eyesConnector.renderPutResource(any(RunningRender.class), any(RGridResource.class),  ArgumentMatchers.<TaskListener<Boolean>>any()))
                 .thenAnswer(new Answer<Future<?>>() {
                     @Override
                     public Future<?> answer(InvocationOnMock invocation) throws Throwable {
                         serverConnector.renderPutResource(
                                 (RunningRender) invocation.getArgument(0),
                                 (RGridResource) invocation.getArgument(1),
-                                (String) invocation.getArgument(2),
-                                (TaskListener<Boolean>) invocation.getArgument(3));
+                                (TaskListener<Boolean>) invocation.getArgument(2));
                         return future;
                     }
                 });

@@ -25,7 +25,6 @@ public class RenderingTask implements Callable<RenderStatusResults> {
     private final IEyesConnector eyesConnector;
     final List<RenderRequest> renderRequests = new ArrayList<>();
     private final List<VisualGridTask> checkTasks = new ArrayList<>();
-    private final UserAgent userAgent;
     final Map<String, RGridResource> fetchedCacheMap;
     final Map<String, RGridResource> putResourceCache;
     private final Logger logger;
@@ -62,16 +61,14 @@ public class RenderingTask implements Callable<RenderStatusResults> {
         void onRenderFailed(Exception e);
     }
 
-    public RenderingTask(IEyesConnector eyesConnector, RenderRequest renderRequest,
-                         VisualGridTask checkTask, VisualGridRunner runner,
-                         RenderTaskListener listener, UserAgent userAgent) {
+    public RenderingTask(IEyesConnector eyesConnector, RenderRequest renderRequest, VisualGridTask checkTask,
+                         VisualGridRunner runner, RenderTaskListener listener) {
         this.eyesConnector = eyesConnector;
         this.renderRequests.add(renderRequest);
         this.checkTasks.add(checkTask);
         this.fetchedCacheMap = runner.getCachedResources();
         this.putResourceCache = runner.getPutResourceCache();
         this.logger = runner.getLogger();
-        this.userAgent = userAgent;
         this.listener = listener;
         String renderingGridForcePut = GeneralUtils.getEnvString("APPLITOOLS_RENDERING_GRID_FORCE_PUT");
         this.isForcePutNeeded = new AtomicBoolean(renderingGridForcePut != null && renderingGridForcePut.equalsIgnoreCase("true"));
@@ -175,7 +172,7 @@ public class RenderingTask implements Callable<RenderStatusResults> {
             if (runningRender.isNeedMoreDom() || forcePut) {
                 try {
                     resourcesPhaser.register();
-                    this.eyesConnector.renderPutResource(runningRender, dom.asResource(), userAgent.getOriginalUserAgentString(), putListener);
+                    this.eyesConnector.renderPutResource(runningRender, dom.asResource(), putListener);
                 } catch (Throwable e) {
                     GeneralUtils.logExceptionStackTrace(logger, e);
                 }
@@ -204,7 +201,7 @@ public class RenderingTask implements Callable<RenderStatusResults> {
 
                 logger.verbose("resource(" + resource.getUrl() + ") hash : " + resource.getSha256());
                 resourcesPhaser.register();
-                this.eyesConnector.renderPutResource(runningRender, resource, userAgent.getOriginalUserAgentString(), putListener);
+                this.eyesConnector.renderPutResource(runningRender, resource, putListener);
                 String contentType = resource.getContentType();
                 synchronized (putResourceCache) {
                     if (!putResourceCache.containsKey(url) && (contentType != null && !contentType.equalsIgnoreCase(RGridDom.CONTENT_TYPE))) {

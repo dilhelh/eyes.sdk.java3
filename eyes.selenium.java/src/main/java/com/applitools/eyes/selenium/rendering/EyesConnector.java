@@ -50,10 +50,12 @@ class EyesConnector extends EyesBase implements IEyesConnector, IBatchCloser {
         return getServerConnector().downloadResource(url, userAgent, refererUrl, listener);
     }
 
-    public Future<?> renderPutResource(RunningRender runningRender, RGridResource resource, String userAgent, TaskListener<Boolean> listener) {
-        return getServerConnector().renderPutResource(runningRender, resource, userAgent, listener);
+    @Override
+    public Future<?> renderPutResource(RunningRender runningRender, RGridResource resource, TaskListener<Boolean> listener) {
+        return getServerConnector().renderPutResource(runningRender, resource, listener);
     }
 
+    @Override
     public List<RunningRender> render(RenderRequest... renderRequests) {
         final AtomicReference<List<RunningRender>> reference = new AtomicReference<>();
         final AtomicReference<EyesSyncObject> lock = new AtomicReference<>(new EyesSyncObject(logger, "render"));

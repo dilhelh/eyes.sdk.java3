@@ -104,7 +104,7 @@ public class ServerConnector extends UfgConnector {
                     "sessionStartInfo into Json string!", e);
         }
 
-        AsyncRequest request = makeEyesRequest(new HttpRequestBuilder() {
+        final AsyncRequest request = makeEyesRequest(new HttpRequestBuilder() {
             @Override
             public AsyncRequest build() {
                 return restClient.target(serverUrl).path(API_PATH)
@@ -116,6 +116,11 @@ public class ServerConnector extends UfgConnector {
             @Override
             public void onComplete(Response response) {
                 try {
+                    if (response.getStatusCode() == HttpStatus.SC_SERVICE_UNAVAILABLE) {
+                        RunningSession runningSession = new RunningSession();
+                        runningSession.setConcurrencyFull(true);
+                    }
+
                     List<Integer> validStatusCodes = new ArrayList<>();
                     validStatusCodes.add(HttpStatus.SC_OK);
                     validStatusCodes.add(HttpStatus.SC_CREATED);
@@ -123,6 +128,8 @@ public class ServerConnector extends UfgConnector {
                     if (runningSession.getIsNew() == null) {
                         runningSession.setIsNew(response.getStatusCode() == HttpStatus.SC_CREATED);
                     }
+
+                    runningSession.setConcurrencyFull(false);
                     listener.onComplete(runningSession);
                 } catch (Throwable t) {
                     onFail(t);

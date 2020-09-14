@@ -310,8 +310,9 @@ public class RunningTest {
      * @return true if the only task left is CLOSE task
      */
     public boolean isTestReadyToClose() {
-
-        if (visualGridTaskList.size() != 1) return false;
+        if (visualGridTaskList.size() != 1) {
+            return false;
+        }
 
         for (VisualGridTask visualGridTask : visualGridTaskList) {
             if (visualGridTask.getType() == VisualGridTask.TaskType.CLOSE || visualGridTask.getType() == VisualGridTask.TaskType.ABORT)
@@ -372,5 +373,9 @@ public class RunningTest {
 
     public void setListener(IRenderingEyes.EyesListener eyesListener) {
         this.listener = eyesListener;
+    }
+
+    public boolean isConcurrencyFull() {
+        return eyesConnector.isConcurrencyFull();
     }
 }

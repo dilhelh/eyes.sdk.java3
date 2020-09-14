@@ -40,7 +40,8 @@ import java.util.concurrent.atomic.AtomicReference;
 public abstract class EyesBase implements IEyesBase {
 
     protected static final int USE_DEFAULT_TIMEOUT = -1;
-    private static final int MAX_ITERATION = 10;
+    private static final int TIME_TO_WAIT_FOR_OPEN = 70 * 1000;
+    private static final int TIME_THRESHOLD = 20 * 1000;
 
     private boolean shouldMatchWindowRunOnceOnTimeout;
 
@@ -60,6 +61,7 @@ public abstract class EyesBase implements IEyesBase {
     protected Logger logger;
 
     protected boolean isOpen;
+    private boolean isConcurrencyFull = false;
 
     private final Queue<Trigger> userInputs;
     private final List<PropertyData> properties = new ArrayList<>();
@@ -707,9 +709,7 @@ public abstract class EyesBase implements IEyesBase {
     }
 
     protected MatchResult checkWindowBase(Region region, ICheckSettingsInternal checkSettingsInternal, String source) {
-
         MatchResult result;
-
         if (getIsDisabled()) {
             logger.verbose("Ignored");
             result = new MatchResult();
@@ -723,18 +723,6 @@ public abstract class EyesBase implements IEyesBase {
         }
 
         ArgumentGuard.isValidState(getIsOpen(), "Eyes not open");
-
-        if (runningSession == null) {
-            final AtomicReference<EyesSyncObject> lock = new AtomicReference<>(new EyesSyncObject(logger, "checkWindowBase"));
-            ensureRunningSession(new SyncTaskListener<Void>(lock));
-            synchronized (lock.get()) {
-                try {
-                    lock.get().waitForNotify();
-                } catch (InterruptedException e) {
-                    throw new EyesException("Failed waiting for open", e);
-                }
-            }
-        }
 
         result = matchWindow(region, tag, checkSettingsInternal, source);
 
@@ -867,42 +855,18 @@ public abstract class EyesBase implements IEyesBase {
             return;
         }
 
-        final AtomicInteger attemptNumber = new AtomicInteger(0);
-        final TaskListener<Void> listener = new TaskListener<Void>() {
-            @Override
-            public void onComplete(Void unused) {
-                validationId = -1;
-                isOpen = true;
-                taskListener.onComplete(null);
-            }
-
-            @Override
-            public void onFail() {
-                if (attemptNumber.incrementAndGet() < MAX_ITERATION) {
-                    try {
-                        ensureRunningSession(this);
-                        return;
-                    } catch (Throwable e) {
-                        GeneralUtils.logExceptionStackTrace(logger, e);
-                    }
-
-                }
-                taskListener.onFail();
-            }
-        };
-
-        ensureRunningSession(listener);
-    }
-
-    protected RectangleSize getViewportSizeForOpen() {
-        return getConfigurationInstance().getViewportSize();
-    }
-
-    protected void ensureRunningSession(final TaskListener<Void> listener) {
-        logger.log("No running session, calling start session...");
-        startSession(new TaskListener<RunningSession>() {
+        final AtomicInteger timePassed = new AtomicInteger(0);
+        final AtomicInteger sleepDuration = new AtomicInteger(5 * 1000);
+        final TaskListener<RunningSession> listener = new TaskListener<RunningSession>() {
             @Override
             public void onComplete(RunningSession result) {
+                if (result.isConcurrencyFull()) {
+                    isConcurrencyFull = true;
+                    onFail();
+                    return;
+                }
+
+                isConcurrencyFull = false;
                 runningSession = result;
                 logger.verbose("Server session ID is " + runningSession.getId());
 
@@ -933,14 +897,37 @@ public abstract class EyesBase implements IEyesBase {
                         }
                 );
 
-                listener.onComplete(null);
+                validationId = -1;
+                isOpen = true;
+                taskListener.onComplete(null);
             }
 
             @Override
             public void onFail() {
-                listener.onFail();
+                if (timePassed.get() > TIME_TO_WAIT_FOR_OPEN) {
+                    taskListener.onFail();
+                    return;
+                }
+
+                try {
+                    Thread.sleep(sleepDuration.get());
+                    timePassed.set(timePassed.get() + sleepDuration.get());
+                    if (timePassed.get() > TIME_THRESHOLD) {
+                        sleepDuration.set(10 * 1000);
+                    }
+                    startSession(this);
+                } catch (Throwable e) {
+                    GeneralUtils.logExceptionStackTrace(logger, e);
+                }
             }
-        });
+        };
+
+        logger.log("No running session, calling start session...");
+        startSession(listener);
+    }
+
+    protected RectangleSize getViewportSizeForOpen() {
+        return getConfigurationInstance().getViewportSize();
     }
 
     private void validateApiKey() {
@@ -1333,5 +1320,9 @@ public abstract class EyesBase implements IEyesBase {
 
     public void abortAsync() {
         abort();
+    }
+
+    public boolean isConcurrencyFull() {
+        return isConcurrencyFull;
     }
 }

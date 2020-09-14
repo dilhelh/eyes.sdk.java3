@@ -349,6 +349,10 @@ public class VisualGridRunner extends EyesRunner {
         int bestMark = -1;
         synchronized (allEyes) {
             for (IRenderingEyes eyes : allEyes) {
+                if (eyes.isConcurrencyFull()) {
+                    return null;
+                }
+
                 ScoreTask currentTestMark = null;
                 try {
                     currentTestMark = eyes.getBestScoreTaskForOpen();
