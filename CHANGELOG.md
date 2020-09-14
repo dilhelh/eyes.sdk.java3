@@ -3,7 +3,7 @@
 - Moved `open` to be before `render`. [Trello 2152](https://trello.com/c/yNzhBkBh)
 - Each running test sends its own rendering task. [Trello 2152](https://trello.com/c/yNzhBkBh)
 - Separated resource collection from the rendering task. [Trello 2152](https://trello.com/c/yNzhBkBh)
-- Removing resource contents after uploading to the server.  [Trello 2152](https://trello.com/c/yNzhBkBh)
+- Removing resource contents after uploading to the server. [Trello 2152](https://trello.com/c/yNzhBkBh)
 - Calculation viewport size for Android devices. [Trello 2132](https://trello.com/c/CDfbKUV6)
 ### Fixed
 - Fixed `DeviceSize` class to use `landscape` field. [Trello 2150](https://trello.com/c/8xXBu5Wk)

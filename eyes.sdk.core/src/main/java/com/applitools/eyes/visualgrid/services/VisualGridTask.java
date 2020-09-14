@@ -42,6 +42,8 @@ public class VisualGridTask implements Callable<TestResultContainer>, Completabl
 
     private final List<VisualGridSelector[]> regionSelectors;
 
+    private boolean isReadyForRender = false;
+
     interface VGTaskListener {
 
         void onTaskComplete(VisualGridTask visualGridTask);
@@ -103,7 +105,7 @@ public class VisualGridTask implements Callable<TestResultContainer>, Completabl
                 case OPEN:
                     logger.verbose("VisualGridTask.run opening task");
                     String userAgent = getUserAgent();
-                    RectangleSize deviceSize = getCorrectDeviceSize();
+                    RectangleSize deviceSize = getDeviceSize();
                     if (deviceSize == null) {
                         deviceSize = RectangleSize.EMPTY;
                     }
@@ -257,7 +259,7 @@ public class VisualGridTask implements Callable<TestResultContainer>, Completabl
         return userAgents.get(browser);
     }
 
-    private RectangleSize getCorrectDeviceSize() {
+    private RectangleSize getDeviceSize() {
         IosDeviceInfo iosDeviceInfo = getBrowserInfo().getIosDeviceInfo();
         EmulationBaseInfo emulationBaseInfo = getBrowserInfo().getEmulationInfo();
         if (iosDeviceInfo == null && emulationBaseInfo == null) {
@@ -312,5 +314,11 @@ public class VisualGridTask implements Callable<TestResultContainer>, Completabl
         return this.eyesConnector.getSession();
     }
 
-}
+    public boolean isReadyForRender() {
+        return isReadyForRender;
+    }
 
+    public void setReadyForRender() {
+        isReadyForRender = true;
+    }
+}

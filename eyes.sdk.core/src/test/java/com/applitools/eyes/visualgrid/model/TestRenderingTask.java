@@ -183,7 +183,7 @@ public class TestRenderingTask extends ReportingTestSuite {
         when(visualGridTask.getEyesConnector()).thenReturn(eyesConnector);
         UserAgent userAgent = mock(UserAgent.class);
         when(userAgent.getOriginalUserAgentString()).thenReturn("");
-        final RenderingTask renderingTask = new RenderingTask(eyesConnector, null, visualGridTask, userAgent);
+        final RenderingTask renderingTask = new RenderingTask(eyesConnector, null, visualGridTask, userAgent, null);
 
         when(eyesConnector.renderPutResource(any(RunningRender.class), any(RGridResource.class), anyString(), ArgumentMatchers.<TaskListener<Boolean>>any()))
                 .thenAnswer(new Answer<Future<?>>() {

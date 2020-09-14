@@ -22,7 +22,7 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
     private static final int FETCH_TIMEOUT_SECONDS = 60;
     public static final int HOUR = 60 * 60 * 1000;
 
-    private final List<RenderTaskListener> listeners = new ArrayList<>();
+    private final RenderTaskListener listener;
     private final IEyesConnector eyesConnector;
     final RenderRequest renderRequest;
     private final VisualGridTask checkTask;
@@ -68,7 +68,8 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
     /**
      * For tests only
      */
-    RenderingTask(IEyesConnector eyesConnector, RenderRequest renderRequest, VisualGridTask checkTask, UserAgent userAgent) {
+    RenderingTask(IEyesConnector eyesConnector, RenderRequest renderRequest, VisualGridTask checkTask,
+                  UserAgent userAgent, RenderTaskListener listener) {
         this.eyesConnector = eyesConnector;
         this.renderRequest = renderRequest;
         this.checkTask = checkTask;
@@ -76,6 +77,7 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
         fetchedCacheMap = new HashMap<>();
         logger = new Logger();
         putResourceCache = new HashMap<>();
+        this.listener = listener;
     }
 
     public RenderingTask(IEyesConnector eyesConnector, String pageUrl, RenderRequest renderRequest,
@@ -89,7 +91,7 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
         this.putResourceCache = renderingGridManager.getPutResourceCache();
         this.logger = renderingGridManager.getLogger();
         this.userAgent = userAgent;
-        this.listeners.add(listener);
+        this.listener = listener;
         String renderingGridForcePut = GeneralUtils.getEnvString("APPLITOOLS_RENDERING_GRID_FORCE_PUT");
         this.isForcePutNeeded = new AtomicBoolean(renderingGridForcePut != null && renderingGridForcePut.equalsIgnoreCase("true"));
     }
@@ -177,7 +179,7 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
         } catch (Throwable e) {
             GeneralUtils.logExceptionStackTrace(logger, e);
             checkTask.setExceptionAndAbort(e);
-            notifyFailAllListeners(new EyesException("Failed rendering", e));
+            listener.onRenderFailed(new EyesException("Failed rendering", e));
         }
         logger.verbose("Finished rendering task - exit");
 
@@ -225,18 +227,6 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
 
     private void setRenderErrorToTasks() {
         renderRequest.getCheckTask().setRenderError(null, "Invalid response for render request");
-    }
-
-    private void notifySuccessAllListeners() {
-        for (RenderTaskListener listener : listeners) {
-            listener.onRenderSuccess();
-        }
-    }
-
-    private void notifyFailAllListeners(Exception e) {
-        for (RenderTaskListener listener : listeners) {
-            listener.onRenderFailed(e);
-        }
     }
 
     private RenderStatus calcWorstStatus(List<RunningRender> runningRenders, RenderStatus worstStatus) {
@@ -372,7 +362,7 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
 
         logger.verbose("marking task as complete: " + pageUrl);
         this.isTaskComplete.set(true);
-        this.notifySuccessAllListeners();
+        listener.onRenderSuccess();
         logger.verbose("exit");
     }
 
@@ -420,10 +410,6 @@ public class RenderingTask implements Callable<RenderStatusResults>, Completable
 
     public boolean isTaskComplete() {
         return isTaskComplete.get();
-    }
-
-    public void addListener(RenderTaskListener listener) {
-        this.listeners.add(listener);
     }
 
     private class TimeoutTask extends TimerTask {

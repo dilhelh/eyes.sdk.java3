@@ -95,8 +95,10 @@ public class ResourceCollectionTask implements Callable<TestResultContainer> {
             logger.verbose("exit - returning renderRequest array of length: " + renderRequests.size());
             List<RenderingTask> renderingTasks = new ArrayList<>();
             for (int i = 0; i < renderRequests.size(); i++) {
+                VisualGridTask checkTask = checkTasks.get(i);
+                checkTask.setReadyForRender();
                 renderingTasks.add(new RenderingTask(eyesConnector, domData.getUrl(), renderRequests.get(i),
-                        checkTasks.get(i), runner, renderTaskListener, userAgent));
+                        checkTask, runner, renderTaskListener, userAgent));
             }
             listener.onComplete(renderingTasks);
         } catch (Throwable t) {

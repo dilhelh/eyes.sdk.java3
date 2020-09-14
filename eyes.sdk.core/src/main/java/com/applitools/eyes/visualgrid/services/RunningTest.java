@@ -173,14 +173,14 @@ public class RunningTest {
 
         int score = 0;
         synchronized (this.visualGridTaskList) {
-            for (VisualGridTask visualGridTask : this.visualGridTaskList) {
-                if (visualGridTask.isTaskReadyToCheck() && visualGridTask.getType() == VisualGridTask.TaskType.CHECK) {
-                    score++;
-                }
-            }
-
             if (this.visualGridTaskList.isEmpty()) {
                 return null;
+            }
+
+            for (VisualGridTask visualGridTask : this.visualGridTaskList) {
+                if (visualGridTask.isReadyForRender() && visualGridTask.getType() == VisualGridTask.TaskType.CHECK) {
+                    score++;
+                }
             }
 
             VisualGridTask chosenVisualGridTask = this.visualGridTaskList.get(0);
