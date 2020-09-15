@@ -405,7 +405,7 @@ public class Configuration implements IConfiguration {
     @Override
     public boolean getIgnoreCaret() {
         Boolean ignoreCaret = getDefaultMatchSettings().getIgnoreCaret();
-        return ignoreCaret == null ? true : ignoreCaret;
+        return ignoreCaret == null || ignoreCaret;
     }
 
     /**

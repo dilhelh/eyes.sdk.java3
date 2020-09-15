@@ -33,7 +33,7 @@ public interface IEyesConnector {
 
     RenderingInfo getRenderingInfo();
 
-    Future<?> renderPutResource(RunningRender runningRender, RGridResource resource, TaskListener<Boolean> listener);
+    Future<?> renderPutResource(String renderId, RGridResource resource, TaskListener<Boolean> listener);
 
     List<RunningRender> render(RenderRequest... renderRequests);
 
@@ -76,4 +76,6 @@ public interface IEyesConnector {
     ServerConnector getServerConnector();
 
     boolean isConcurrencyFull();
+
+    void checkResourceStatus(final TaskListener<Boolean[]> listener, String renderId, HashObject... hashes);
 }

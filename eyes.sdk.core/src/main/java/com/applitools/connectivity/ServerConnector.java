@@ -30,6 +30,7 @@ public class ServerConnector extends UfgConnector {
     static final String CLOSE_BATCH = "api/sessions/batches/%s/close/bypointerid";
     static final String RENDER_STATUS = "/render-status";
     static final String RENDER = "/render";
+    static final String RESOURCE_STATUS = "/query/resources-exist";
     static final String MOBILE_DEVICES_PATH = "/app/info/mobile/devices";
     public static final String API_PATH = "/api/sessions/running";
 
@@ -315,6 +316,28 @@ public class ServerConnector extends UfgConnector {
             }, new TypeReference<RenderStatusResults[]>() {});
             sendAsyncRequest(request, HttpMethod.POST, callback, json, MediaType.APPLICATION_JSON);
         } catch (Exception e) {
+            GeneralUtils.logExceptionStackTrace(logger, e);
+            listener.onComplete(null);
+        }
+    }
+
+    public void checkResourceStatus(final TaskListener<Boolean[]> listener, String renderId, HashObject... hashes) {
+        try {
+            ArgumentGuard.notNull(hashes, "hashes");
+            renderId = renderId == null ? "NONE" : renderId;
+            AsyncRequest request = restClient.target(renderingInfo.getServiceUrl()).queryParam("rg_render-id", renderId)
+                    .path(RESOURCE_STATUS).asyncRequest(MediaType.APPLICATION_JSON);
+            request.header("X-Auth-Token", renderingInfo.getAccessToken());
+            List<Integer> validStatusCodes = new ArrayList<>();
+            validStatusCodes.add(HttpStatus.SC_OK);
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+            objectMapper.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
+            String json = objectMapper.writeValueAsString(hashes);
+            ResponseParsingCallback<Boolean[]> callback = new ResponseParsingCallback<>(this, validStatusCodes, listener, new TypeReference<Boolean[]>() {});
+            sendAsyncRequest(request, HttpMethod.POST, callback, json, MediaType.APPLICATION_JSON);
+        } catch (Throwable e) {
             GeneralUtils.logExceptionStackTrace(logger, e);
             listener.onComplete(null);
         }

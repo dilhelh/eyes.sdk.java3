@@ -905,6 +905,7 @@ public abstract class EyesBase implements IEyesBase {
             @Override
             public void onFail() {
                 if (timePassed.get() > TIME_TO_WAIT_FOR_OPEN) {
+                    isConcurrencyFull = false;
                     taskListener.onFail();
                     return;
                 }

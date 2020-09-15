@@ -22,6 +22,7 @@ public class VisualGridRunner extends EyesRunner {
     private final Set<IRenderingEyes> allEyes = Collections.synchronizedSet(new HashSet<IRenderingEyes>());
     private final Map<String, RGridResource> cachedResources = Collections.synchronizedMap(new HashMap<String, RGridResource>());
     private final Map<String, RGridResource> putResourceCache = Collections.synchronizedMap(new HashMap<String, RGridResource>());
+    private final Set<String> checkResourceCache = Collections.synchronizedSet(new HashSet<String>());
 
     private final Object openerServiceConcurrencyLock = new Object();
     private final Object openerServiceLock = new Object();
@@ -162,6 +163,10 @@ public class VisualGridRunner extends EyesRunner {
 
     public Map<String, RGridResource> getPutResourceCache() {
         return putResourceCache;
+    }
+
+    public Set<String> getCheckResourceCache() {
+        return checkResourceCache;
     }
 
     public RenderingInfo getRenderingInfo() {

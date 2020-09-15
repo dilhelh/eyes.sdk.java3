@@ -37,8 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class TestRenderingTask extends ReportingTestSuite {
 
@@ -188,12 +187,12 @@ public class TestRenderingTask extends ReportingTestSuite {
         final RenderingTask renderingTask = new RenderingTask(eyesConnector, renderRequest, visualGridTask,
                 new VisualGridRunner(10), null);
 
-        when(eyesConnector.renderPutResource(any(RunningRender.class), any(RGridResource.class),  ArgumentMatchers.<TaskListener<Boolean>>any()))
+        when(eyesConnector.renderPutResource(any(String.class), any(RGridResource.class),  ArgumentMatchers.<TaskListener<Boolean>>any()))
                 .thenAnswer(new Answer<Future<?>>() {
                     @Override
                     public Future<?> answer(InvocationOnMock invocation) throws Throwable {
                         serverConnector.renderPutResource(
-                                (RunningRender) invocation.getArgument(0),
+                                (String) invocation.getArgument(0),
                                 (RGridResource) invocation.getArgument(1),
                                 (TaskListener<Boolean>) invocation.getArgument(2));
                         return future;
@@ -258,6 +257,50 @@ public class TestRenderingTask extends ReportingTestSuite {
 
         Map<String, RGridResource> resourceMap = reference.get().get(0).renderRequests.get(0).getResources();
         Assert.assertEquals(resourceMap.keySet(), new HashSet<>(urls));
+    }
+
+    @Test
+    public void testCheckResources() {
+        Map<String, RGridResource> resourceMap = new HashMap<>();
+        for (int i = 0; i < 5; i++) {
+            RGridResource resource = mock(RGridResource.class);
+            when(resource.getHashFormat()).thenCallRealMethod();
+            when(resource.getSha256()).thenReturn(String.valueOf(i));
+            when(resource.getUrl()).thenReturn(String.valueOf(i));
+            resourceMap.put(resource.getUrl(), resource);
+        }
+
+        IEyesConnector eyesConnector = mock(IEyesConnector.class);
+        RenderRequest renderRequest = mock(RenderRequest.class);
+        VisualGridTask task = mock(VisualGridTask.class);
+        VisualGridRunner runner = new VisualGridRunner(10);
+        RenderingTask renderingTask = new RenderingTask(eyesConnector, renderRequest, task, runner, null);
+        renderingTask.checkResourceCache.add("2");
+        renderingTask.fetchedCacheMap.putAll(resourceMap);
+
+        final AtomicReference<List<String>> checkedHashes = new AtomicReference<>();
+        doAnswer(new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocation) {
+                TaskListener<Boolean[]> listener = invocation.getArgument(0);
+                List<String> hashes = new ArrayList<>();
+                for (int i = 2 ; i < invocation.getArguments().length; i++) {
+                    HashObject hashObject = invocation.getArgument(i);
+                    hashes.add(hashObject.getHash());
+                }
+
+                checkedHashes.set(hashes);
+
+                listener.onComplete(new Boolean[]{true, false, null, true});
+                return null;
+            }
+        }).when(eyesConnector).checkResourceStatus(ArgumentMatchers.<TaskListener<Boolean[]>>any(), ArgumentMatchers.<String>isNull(), ArgumentMatchers.<HashObject[]>any());
+
+        Map<String, RGridResource> missingResources = renderingTask.checkResourcesStatus();
+        Assert.assertEquals(checkedHashes.get().toArray(), new String[] {"0", "1", "3", "4"});
+        Assert.assertEquals(missingResources.size(), 2);
+        Assert.assertTrue(missingResources.containsKey("1"));
+        Assert.assertTrue(missingResources.containsKey("3"));
     }
 
     /**

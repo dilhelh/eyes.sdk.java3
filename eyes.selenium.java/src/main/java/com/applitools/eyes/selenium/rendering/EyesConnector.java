@@ -51,8 +51,8 @@ class EyesConnector extends EyesBase implements IEyesConnector, IBatchCloser {
     }
 
     @Override
-    public Future<?> renderPutResource(RunningRender runningRender, RGridResource resource, TaskListener<Boolean> listener) {
-        return getServerConnector().renderPutResource(runningRender, resource, listener);
+    public Future<?> renderPutResource(String renderId, RGridResource resource, TaskListener<Boolean> listener) {
+        return getServerConnector().renderPutResource(renderId, resource, listener);
     }
 
     @Override
@@ -200,6 +200,11 @@ class EyesConnector extends EyesBase implements IEyesConnector, IBatchCloser {
 
     public RunningSession getSession() {
         return this.runningSession;
+    }
+
+    @Override
+    public void checkResourceStatus(TaskListener<Boolean[]> listener, String renderId, HashObject... hashes) {
+        serverConnector.checkResourceStatus(listener, renderId, hashes);
     }
 
     protected RectangleSize getViewportSizeForOpen() {

@@ -294,9 +294,9 @@ public class TestRenderings extends ReportingTestSuite {
             }
 
             @Override
-            public Future<?> renderPutResource(RunningRender runningRender, RGridResource resource, TaskListener<Boolean> listener) {
+            public Future<?> renderPutResource(String renderId, RGridResource resource, TaskListener<Boolean> listener) {
                 missingResources.put(resource.getUrl(), resource);
-                return super.renderPutResource(runningRender, resource, listener);
+                return super.renderPutResource(renderId, resource, listener);
             }
         };
         serverConnector.updateClient(client);
