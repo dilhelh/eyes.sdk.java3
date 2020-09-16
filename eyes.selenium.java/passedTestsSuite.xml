@@ -453,4 +453,15 @@
             </class>
         </classes>
     </test>
+    <test name="TestVisualGridRunner">
+        <classes>
+            <class name="com.applitools.eyes.visualgrid.services.TestVisualGridRunner">
+                <methods>
+                    <include name="testFlow"/>
+                    <include name="testRunnerConcurrency"/>
+                    <include name="testServerConcurrency"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
 </suite>

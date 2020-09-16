@@ -7,7 +7,7 @@ import com.applitools.utils.GeneralUtils;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class OpenerService extends EyesService{
+public class OpenerService extends EyesService {
 
     private final AtomicInteger currentTestAmount = new AtomicInteger();
     private final Object concurrencyLock;

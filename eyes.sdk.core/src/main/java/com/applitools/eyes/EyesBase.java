@@ -860,8 +860,10 @@ public abstract class EyesBase implements IEyesBase {
         final TaskListener<RunningSession> listener = new TaskListener<RunningSession>() {
             @Override
             public void onComplete(RunningSession result) {
+                String testName = "'" + getTestName() + "'";
                 if (result.isConcurrencyFull()) {
                     isConcurrencyFull = true;
+                    logger.verbose(String.format("Failed starting test %s, concurrency is fully used. Trying again.", testName));
                     onFail();
                     return;
                 }
@@ -871,7 +873,6 @@ public abstract class EyesBase implements IEyesBase {
                 logger.verbose("Server session ID is " + runningSession.getId());
 
                 logger.setSessionId(runningSession.getSessionId());
-                String testName = "'" + getTestName() + "'";
                 if (runningSession.getIsNew()) {
                     logger.log("--- New test started - " + testName);
                     shouldMatchWindowRunOnceOnTimeout = true;
@@ -919,6 +920,7 @@ public abstract class EyesBase implements IEyesBase {
                     startSession(this);
                 } catch (Throwable e) {
                     GeneralUtils.logExceptionStackTrace(logger, e);
+                    taskListener.onFail();
                 }
             }
         };

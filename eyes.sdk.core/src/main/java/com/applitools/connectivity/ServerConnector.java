@@ -120,6 +120,8 @@ public class ServerConnector extends UfgConnector {
                     if (response.getStatusCode() == HttpStatus.SC_SERVICE_UNAVAILABLE) {
                         RunningSession runningSession = new RunningSession();
                         runningSession.setConcurrencyFull(true);
+                        listener.onComplete(runningSession);
+                        return;
                     }
 
                     List<Integer> validStatusCodes = new ArrayList<>();

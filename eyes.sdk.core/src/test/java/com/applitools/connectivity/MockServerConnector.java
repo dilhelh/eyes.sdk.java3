@@ -3,7 +3,9 @@ package com.applitools.connectivity;
 import com.applitools.eyes.*;
 import com.applitools.eyes.visualgrid.model.*;
 
+import java.net.URI;
 import java.util.*;
+import java.util.concurrent.Future;
 
 public class MockServerConnector extends ServerConnector {
 
@@ -69,6 +71,25 @@ public class MockServerConnector extends ServerConnector {
         newSession.setIsNew(false);
         newSession.setSessionId(UUID.randomUUID().toString());
         listener.onComplete(newSession);
+    }
+
+    @Override
+    public void checkResourceStatus(final TaskListener<Boolean[]> listener, String renderId, HashObject... hashes) {
+        listener.onComplete(new Boolean[0]);
+    }
+
+    @Override
+    public Future<?> renderPutResource(final String renderID, final RGridResource resource,
+                                       final TaskListener<Boolean> listener) {
+        listener.onComplete(true);
+        return null;
+    }
+
+    @Override
+    public Future<?> downloadResource(final URI url, final String userAgent, final String refererUrl,
+                                      final TaskListener<RGridResource> listener) {
+        listener.onComplete(RGridResource.createEmpty(url.toString()));
+        return null;
     }
 
     @Override

@@ -19,7 +19,7 @@ public class VisualGridRunner extends EyesRunner {
     private RenderingGridService renderingGridService;
     private final ThreadGroup servicesGroup = new ThreadGroup("Services Group");
     private final List<IRenderingEyes> eyesToOpenList = Collections.synchronizedList(new ArrayList<IRenderingEyes>(200));
-    private final Set<IRenderingEyes> allEyes = Collections.synchronizedSet(new HashSet<IRenderingEyes>());
+    final Set<IRenderingEyes> allEyes = Collections.synchronizedSet(new HashSet<IRenderingEyes>());
     private final Map<String, RGridResource> cachedResources = Collections.synchronizedMap(new HashMap<String, RGridResource>());
     private final Map<String, RGridResource> putResourceCache = Collections.synchronizedMap(new HashMap<String, RGridResource>());
     private final Set<String> checkResourceCache = Collections.synchronizedSet(new HashSet<String>());

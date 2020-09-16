@@ -272,6 +272,7 @@ public class VisualGridTask implements Callable<TestResultContainer> {
         Map<String, DeviceSize> devicesSizes = eyesConnector.getDevicesSizes(path);
         if (!devicesSizes.containsKey(deviceName)) {
             logger.verbose(String.format("could not find device %s in list", deviceName));
+            return null;
         }
 
         if (screenOrientation.equals(ScreenOrientation.PORTRAIT)){
